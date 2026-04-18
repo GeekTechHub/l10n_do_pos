@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    l10n_do_pos - Template NCF Badge
+    ===================================
+    Extiende el template de PaymentScreen para mostrar un badge
+    con el tipo de NCF (B01, B02, etc.) según el cliente seleccionado.
+
+    Convenciones Odoo 19 OWL:
+      - t-name: nombre único del template (módulo.Nombre)
+      - t-inherit: template a heredar (debe existir en el bundle POS)
+      - t-inherit-mode="extension": modo extensión (no reemplaza, añade)
+      - xpath: selector para encontrar el punto de inserción
+      - position: "after" inserta justo después del nodo encontrado
+
+    El badge se muestra SOLO cuando:
+      1. Hay un partner seleccionado en la orden
+      2. El partner tiene una posición fiscal asignada
+      3. La posición fiscal tiene pos_ncf_type configurado
+
+    El getter `currentNcfInfo` está definido en ncf_badge.js
+-->
+<templates id="template" xml:space="preserve">
+
+    <t t-name="l10n_do_pos.PaymentScreen"
+       t-inherit="point_of_sale.PaymentScreen"
+       t-inherit-mode="extension">
+
+        <!--
+            Insertamos el badge DESPUÉS del botón de partner.
+            El botón con clase 'partner-button' es el selector de cliente
+            en la PaymentScreen de Odoo 17/18/19.
+            Si el xpath falla por cambio de estructura, el módulo simplemente
+            no mostrará el badge pero NO generará errores en la facturación.
+        -->
+        <xpath expr="//button[hasclass('partner-button')]" position="after">
+
+            <!-- Badge NCF: solo visible cuando currentNcfInfo no es null -->
+            <div t-if="currentNcfInfo"
+                 class="l10n-do-ncf-badge d-flex align-items-center justify-content-center ms-1 me-1">
+
+                <span class="badge rounded-pill fw-bold px-2 py-1 l10n-do-ncf-pill"
+                      t-att-title="'Comprobante: ' + currentNcfInfo.ncfType
+                                   + ' | Posición: ' + currentNcfInfo.fpName
+                                   + (currentNcfInfo.journalName ? ' | Diario: ' + currentNcfInfo.journalName : '')">
+                    <i class="fa fa-file-text-o me-1"/>
+                    NCF: <strong t-esc="currentNcfInfo.ncfType"/>
+                </span>
+
+            </div>
+
+        </xpath>
+
+    </t>
+
+</templates>

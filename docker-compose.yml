@@ -1,0 +1,83 @@
+version: "3.8"
+
+# =============================================================================
+# docker-compose.yml — Odoo 19 Community + PostgreSQL + l10n_do_pos
+# =============================================================================
+# Uso:
+#   docker compose up -d
+#   Acceder en: http://localhost:8069
+#
+# Primera vez:
+#   1. Crear la base de datos desde la interfaz web.
+#   2. Instalar l10n_do (localización dominicana).
+#   3. Instalar l10n_do_pos (este módulo).
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Base de datos PostgreSQL
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16
+    container_name: odoo19_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo_secure_password_2024
+    volumes:
+      - odoo_db_data:/var/lib/postgresql/data
+    networks:
+      - odoo_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Odoo 19 Community con el módulo l10n_do_pos
+  # ---------------------------------------------------------------------------
+  odoo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: odoo19_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HOST: db
+      USER: odoo
+      PASSWORD: odoo_secure_password_2024
+    ports:
+      - "8069:8069"     # Puerto principal Odoo
+      - "8072:8072"     # Longpolling (chat, notificaciones)
+    volumes:
+      - odoo_web_data:/var/lib/odoo
+      - odoo_logs:/var/log/odoo
+      # Montar el módulo en modo desarrollo (útil para desarrollo activo)
+      # Comentar esta línea en producción (ya está copiado en la imagen)
+      # - ./l10n_do_pos:/mnt/extra-addons/l10n_do_pos
+    networks:
+      - odoo_net
+
+# ---------------------------------------------------------------------------
+# Volúmenes persistentes
+# ---------------------------------------------------------------------------
+volumes:
+  odoo_db_data:
+    driver: local
+  odoo_web_data:
+    driver: local
+  odoo_logs:
+    driver: local
+
+# ---------------------------------------------------------------------------
+# Red interna
+# ---------------------------------------------------------------------------
+networks:
+  odoo_net:
+    driver: bridge
